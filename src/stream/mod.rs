@@ -2,3 +2,4 @@
 
 pub mod seq;
 pub mod range;
+pub mod tbseq;

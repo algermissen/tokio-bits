@@ -22,8 +22,6 @@ impl<T: Incrementable> Stream for SeqStream<T> {
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         let v = self.next;
         self.next.post_inc();
-
         Ok(Async::Ready(Some(v)))
-
     }
 }
