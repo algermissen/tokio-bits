@@ -11,3 +11,9 @@ repository = "https://github.com/algermissen/tokio-bits"
 
 [dependencies]
 futures = "0.1.7"
+
+[dev-dependencies]
+tokio-core = "0.1.6"
+
+
+
