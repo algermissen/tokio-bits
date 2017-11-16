@@ -1,10 +1,16 @@
 use futures::{Stream, Async, Poll, Future};
-
 use ops::inc::Incrementable;
 use std::time::{SystemTime, UNIX_EPOCH};
 use futures::Sink;
+use futures::sink::SendAll;
 use futures::StartSend;
 use futures::AsyncSink;
+use std::time::Duration;
+use tokio_core::reactor::Timeout;
+use tokio_core::reactor::Handle;
+use std::convert::From;
+use std::rc::{Rc, Weak};
+use std::cell::RefCell;
 
 #[derive(Debug)]
 pub struct Error {
@@ -55,65 +61,83 @@ impl Error {
     }
 }
 
-
-/// A stream that produces a sequence of numbers
-/// for a maximum amount of time.
-#[derive(Clone)]
-pub struct ResultStream<T: Clone> {
-    next: Option<(T, u64)>,
-}
-
-impl<T: Clone> ResultStream<T> {
-    pub fn pair(item: T, in_secs: u64) -> (Self, Self) {
-        let s = ResultStream { next: Some((item, Self::now() + in_secs)) };
-        let t = s.clone();
-        (s, t)
-    }
-
-    fn next(&mut self, item: T, in_secs: u64) {
-        self.next = Some((item, Self::now() + in_secs));
-    }
-
-    fn now() -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .expect("Time went backwards")
+impl From<::std::io::Error> for Error {
+    fn from(e: ::std::io::Error) -> Self {
+        Error::new(ErrorKind::Other, e)
     }
 }
 
-impl<T: Clone> Stream for ResultStream<T> {
+pub struct ResultStream<T> {
+    inner: Rc<RefCell<Inner<T>>>,
+}
+
+struct Inner<T> {
+    next: Option<T>,
+    timeout: Timeout,
+    handle: Handle,
+}
+
+pub struct MySink<T> {
+    inner: Weak<RefCell<Inner<T>>>,
+}
+
+
+
+impl<T> ResultStream<T> {
+    pub fn pair(handle: &Handle, item: T, dur: Duration) -> (Self, MySink<T>) {
+        let handle = handle.clone();
+        let handle2 = handle.clone();
+        let timeout = Timeout::new(dur, &handle2).unwrap();
+
+        let stream = ResultStream {
+            inner: Rc::new(RefCell::new(Inner {
+                handle: handle2,
+                next: Some(item),
+                timeout: timeout,
+            })),
+        };
+        let sink = MySink { inner: Rc::downgrade(&stream.inner) };
+        (stream, sink)
+    }
+}
+
+impl<T> Inner<T> {
+    fn next(&mut self, item: T, dur: Duration) {
+        self.next = Some(item);
+        self.timeout = Timeout::new(dur, &self.handle).unwrap();
+    }
+}
+
+impl<T> MySink<T> {
+    fn next(&self, item: T, dur: Duration) {
+        let inner = match self.inner.upgrade() {
+            Some(inner) => inner,
+            None => return,
+        };
+        inner.borrow_mut().next(item, dur);
+    }
+}
+
+impl<T> Stream for ResultStream<T> {
     type Item = T;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        println!("POLL STREAM");
-        match self.next {    
-            Some((ref item, at)) => {
-                println!("POLL STREAM 1");
-                if Self::now() >= at {
-                    println!("POLL STREAM 2");
-                    Ok(Async::Ready(Some(item.clone())))
-                } else {
-                    println!("POLL STREAM 3");
-                    Ok(Async::NotReady)
-                }
-            }
-            None => {
-                println!("POLL STREAM 4");
-                Ok(Async::NotReady)
-            }
-        }
+        let _ = try_ready!(self.inner.borrow_mut().timeout.poll());
+        let item = self.inner.borrow_mut().next.take().unwrap();
+        Ok(Async::Ready(Some(item)))
     }
 }
 
-impl<T: Clone> Sink for ResultStream<T> {
+impl<T> Sink for MySink<T> {
     type SinkItem = T;
     type SinkError = Error;
 
     fn start_send(&mut self, item: Self::SinkItem) -> StartSend<Self::SinkItem, Self::SinkError> {
+        //println!("START SEND {}", item);
         println!("START SEND");
-        self.next(item, 1);
+        let dur = Duration::from_millis(10000);
+        self.next(item, dur);
         Ok(AsyncSink::Ready)
     }
 
@@ -124,38 +148,4 @@ impl<T: Clone> Sink for ResultStream<T> {
     fn close(&mut self) -> Poll<(), Self::SinkError> {
         Ok(Async::Ready(()))
     }
-}
-
-
-
-
-#[cfg(test)]
-mod tests {
-    extern crate tokio_core;
-    use self::tokio_core::reactor::Core;
-    use super::*;
-    use futures::stream::Stream;
-
-    #[test]
-
-    fn it_works() {
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
-        let i: i32 = 1;
-        let (source, sink) = ResultStream::pair(i, 1);
-
-        let s = source
-            .map(|x| {
-                println!("___ X: {:?}", x);
-                x
-            })
-            .map_err(|e| Error::new(ErrorKind::Other, e));
-
-        let x = sink.send_all(s);
-        handle.spawn(x.map(|_| ()).map_err(|_| ()));
-        core.run(::futures::empty::<(), ()>()).unwrap();
-
-
-    }
-
 }
