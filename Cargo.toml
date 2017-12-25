@@ -1,20 +1,6 @@
-[package]
-name = "tokio-bits"
-version = "0.1.1"
-authors = ["Jan Algermissen <algermissen@acm.org>"]
-description = "A collection of modules useful when developing Tokio based applications.\n"
-homepage = "https://github.com/algermissen/tokio-bits"
-documentation = "https://docs.rs/tokio-bits"
-readme = "README.md"
-license = "Apache-2.0"
-repository = "https://github.com/algermissen/tokio-bits"
+[workspace]
 
-[dependencies]
-futures = "0.1.7"
-tokio-core = "0.1.6"
-hyper = "0.11"
-
-
-
-
+members = [
+"tokio-bits",
+]
 
