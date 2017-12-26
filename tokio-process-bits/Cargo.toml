@@ -1,0 +1,17 @@
+[package]
+name = "tokio-process-bits"
+version = "0.1.0"
+authors = ["Jan Algermissen <algermissen@acm.org>"]
+description = "A collection of modules useful when developing Tokio based applications that spawn child processes.\n"
+homepage = "https://github.com/algermissen/tokio-bits"
+documentation = "https://docs.rs/tokio-process-bits"
+repository = "https://github.com/algermissen/tokio-bits"
+license = "Apache-2.0"
+readme = "README.md"
+
+[dependencies]
+futures = "0.1.17"
+tokio-core = "0.1.11"
+tokio-io = "0.1.4"
+tokio-process = "0.1.4"
+

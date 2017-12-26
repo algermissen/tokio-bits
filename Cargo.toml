@@ -2,5 +2,6 @@
 
 members = [
 "tokio-bits",
+"tokio-process-bits",
 ]
 
