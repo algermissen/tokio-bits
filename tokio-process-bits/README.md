@@ -4,10 +4,9 @@ Exploring tokio-process async pipes io
 This example shows how to read child processes stdout as streams of lines
 in an async fashion.
 
-Building and running will produce something like this:
+Running the example will produce something like this:
 
-    $ cargo build
-    $ ./target/debug/tokio-process-pipes
+    $ cargo run --example simple
 
     LINE: [CHILD 88187] PING 127.0.0.1 (127.0.0.1): 56 data bytes
     LINE: [CHILD 88187] 64 bytes from 127.0.0.1: icmp_seq=0 ttl=64 time=0.123 ms
