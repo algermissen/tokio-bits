@@ -1,6 +1,6 @@
 [package]
 name = "tokio-process-bits"
-version = "0.1.3"
+version = "0.1.4"
 authors = ["Jan Algermissen <algermissen@acm.org>"]
 description = "A collection of modules useful when developing Tokio based applications that spawn child processes.\n"
 homepage = "https://github.com/algermissen/tokio-bits"

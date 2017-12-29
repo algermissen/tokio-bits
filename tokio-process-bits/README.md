@@ -1,4 +1,4 @@
-# tokio-process-pipes
+# tokio-process-bits
 Exploring tokio-process async pipes io
 
 This example shows how to read child processes stdout as streams of lines
