@@ -1,0 +1,9 @@
+[package]
+name = "tokio-fsm-futures"
+version = "0.1.0"
+authors = ["Jan Algermissen <algermissen@acm.org>"]
+
+[dependencies]
+futures = "0.1.17"
+tokio-core = "0.1.6"
+hyper = "0.11"
