@@ -3,5 +3,6 @@
 members = [
 "tokio-bits",
 "tokio-process-bits",
+"tokio-fsm-futures",
 ]
 

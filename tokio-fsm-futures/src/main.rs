@@ -14,6 +14,7 @@ type MyFuture = Future<Item = String, Error = io::Error>;
 pub struct UserAgent {
     inner: Rc<Inner>,
 }
+
 impl UserAgent {
     pub fn new(handle: &Handle) -> Self {
         UserAgent {
@@ -65,7 +66,7 @@ impl FsmFuture {
             .get(uri)
             .map(|res| {
                 let b = format!("Response: {}", res.status());
-                println!("___{}", b);
+                println!("{}", b);
                 b
             })
             .map_err(|err| io::Error::new(io::ErrorKind::Other, err));
@@ -79,37 +80,37 @@ impl Future for FsmFuture {
 
     fn poll(&mut self) -> futures::Poll<Self::Item, Self::Error> {
         println!("__________ POLLING");
-        let s = match self.state {
-            State::Requesting(ref mut f) => {
-                match f.poll() {
-                    Ok(Async::NotReady) => return Ok(Async::NotReady),
-                    Ok(Async::Ready(_v)) => {
-                        println!("OK");
-                        State::Sleeping(FsmFuture::make_timeout(&self.inner))
-                    }
-                    Err(e) => {
-                        println!("Err {:?}", e);
-                        State::Sleeping(FsmFuture::make_timeout(&self.inner))
-                    }
-                }
-            }
-            State::Sleeping(ref mut f) => {
-                match f.poll() {
-                    Ok(Async::NotReady) => return Ok(Async::NotReady),
-                    Ok(Async::Ready(_v)) => {
-                        println!("Timer done");
-                        let f = FsmFuture::make_request_future(&self.inner);
-                        State::Requesting(f)
-                    }
-                    Err(_e) => {
-                        panic!("timer error");
+        loop {
+            let s = match self.state {
+                State::Requesting(ref mut f) => {
+                    match f.poll() {
+                        Ok(Async::NotReady) => return Ok(Async::NotReady),
+                        Ok(Async::Ready(_v)) => {
+                            println!("OK");
+                            State::Sleeping(FsmFuture::make_timeout(&self.inner))
+                        }
+                        Err(e) => {
+                            println!("Err {:?}", e);
+                            State::Sleeping(FsmFuture::make_timeout(&self.inner))
+                        }
                     }
                 }
-            }
-        };
-        self.state = s;
-        futures::task::current().notify();
-        Ok(Async::NotReady)
+                State::Sleeping(ref mut f) => {
+                    match f.poll() {
+                        Ok(Async::NotReady) => return Ok(Async::NotReady),
+                        Ok(Async::Ready(_v)) => {
+                            println!("Timer done");
+                            let f = FsmFuture::make_request_future(&self.inner);
+                            State::Requesting(f)
+                        }
+                        Err(_e) => {
+                            panic!("timer error");
+                        }
+                    }
+                }
+            };
+            self.state = s;
+        }
     }
 }
 
